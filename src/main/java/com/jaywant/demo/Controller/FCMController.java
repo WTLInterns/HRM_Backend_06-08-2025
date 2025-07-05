@@ -30,6 +30,43 @@ public class FCMController {
     @Autowired
     private FirebaseService firebaseService;
 
+    @PostMapping("/send")
+    public ResponseEntity<Map<String, Object>> sendTestNotification(@RequestBody Map<String, String> request) {
+        try {
+            String token = request.get("token");
+            String title = request.get("title");
+            String body = request.get("body");
+
+            if (token == null || title == null || body == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("error", "Missing required fields: token, title, body");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Send notification using Firebase service
+            String messageId = firebaseService.sendNotification(token, title, body, null);
+
+            Map<String, Object> response = new HashMap<>();
+            if (messageId != null && !messageId.equals("firebase-not-available") && !messageId.equals("no-token")) {
+                response.put("success", true);
+                response.put("message", "Notification sent successfully");
+                response.put("messageId", messageId);
+            } else {
+                response.put("success", false);
+                response.put("error", "Failed to send notification");
+                response.put("messageId", messageId);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to send notification: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
     @PostMapping("/register-token")
     public ResponseEntity<String> registerToken(@RequestBody Map<String, String> request) {
         try {
