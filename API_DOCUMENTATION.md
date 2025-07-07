@@ -395,17 +395,17 @@ GET /api/certificate/summary/2
 
 ### Get salary slip for employee 558 under subadmin 2:
 ```bash
-curl -X GET "http://localhost:8282/api/employee/2/558/salary-slip?startDate=2025-01-01&endDate=2025-01-31"
+curl -X GET "https://api.managifyhr.com/api/employee/2/558/salary-slip?startDate=2025-01-01&endDate=2025-01-31"
 ```
 
 ### Get all certificates for employee 558:
 ```bash
-curl -X GET "http://localhost:8282/api/certificate/get/2/558"
+curl -X GET "https://api.managifyhr.com/api/certificate/get/2/558"
 ```
 
 ### Upload experience certificate:
 ```bash
-curl -X POST "http://localhost:8282/api/certificate/send/2/558/experience" \
+curl -X POST "https://api.managifyhr.com/api/certificate/send/2/558/experience" \
   -F "file=@experience_certificate.pdf"
 ```
 

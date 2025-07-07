@@ -47,3 +47,5 @@ firebase-base64.txt
 encode-firebase.js
 **/firebase-base64.txt
 **/encode-firebase.js
+test_fcm.json
+**/test_fcm.json
