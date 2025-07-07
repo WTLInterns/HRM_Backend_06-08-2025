@@ -63,10 +63,11 @@ public class SalarySlip {
     }
 
     // Constructors
-    public SalarySlip() {}
+    public SalarySlip() {
+    }
 
-    public SalarySlip(Employee employee, Subadmin subadmin, String startDate, String endDate, 
-                     String paySlipMonth, String pdfPath) {
+    public SalarySlip(Employee employee, Subadmin subadmin, String startDate, String endDate,
+            String paySlipMonth, String pdfPath) {
         this.employee = employee;
         this.subadmin = subadmin;
         this.startDate = startDate;
