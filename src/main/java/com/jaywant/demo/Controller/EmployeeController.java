@@ -1040,7 +1040,7 @@ public class EmployeeController {
         result.put("workType", att.getWorkType());
         result.put("status", att.getStatus());
         result.put("imagePath", att.getImagePath());
-        result.put("imageUrl", "https://api.managifyhr.com/images/" + att.getImagePath().replace("images/", ""));
+        result.put("imageUrl", "http://localhost:8080/images/" + att.getImagePath().replace("images/", ""));
         result.put("punchInTime", att.getPunchInTime() != null ? att.getPunchInTime().toString() : null);
         result.put("punchOutTime", att.getPunchOutTime() != null ? att.getPunchOutTime().toString() : null);
         return ResponseEntity.ok(result);
@@ -1084,7 +1084,7 @@ public class EmployeeController {
           result.put("workType", att.getWorkType());
           result.put("status", att.getStatus());
           result.put("imagePath", att.getImagePath());
-          result.put("imageUrl", "https://api.managifyhr.com/images/" + att.getImagePath().replace("images/", ""));
+          result.put("imageUrl", "http://localhost:8080/images/" + att.getImagePath().replace("images/", ""));
           result.put("punchInTime", att.getPunchInTime() != null ? att.getPunchInTime().toString() : null);
           result.put("punchOutTime", att.getPunchOutTime() != null ? att.getPunchOutTime().toString() : null);
           results.add(result);

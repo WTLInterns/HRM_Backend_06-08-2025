@@ -183,7 +183,7 @@ LIMIT 5;
 
 ### **3. Test Firebase Endpoint:**
 ```bash
-curl -X POST https://api.managifyhr.com/api/fcm/send \
+curl -X POST http://localhost:8080/api/fcm/send \
   -H "Content-Type: application/json" \
   -d '{
     "token": "test_token",

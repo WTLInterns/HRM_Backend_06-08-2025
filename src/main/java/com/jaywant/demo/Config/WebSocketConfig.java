@@ -26,7 +26,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                                 "http://localhost:5173",
                                                 "http://localhost:5174",
                                                 "https://admin.managifyhr.com",
-                                                "https://api.managifyhr.com")
+                                                "http://localhost:8080")
                                 .withSockJS();
 
                 registry.addEndpoint("/ws")
@@ -34,7 +34,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                                 "http://localhost:5173",
                                                 "http://localhost:5174",
                                                 "https://admin.managifyhr.com",
-                                                "https://api.managifyhr.com");
+                                                "http://localhost:8080");
 
         }
 }

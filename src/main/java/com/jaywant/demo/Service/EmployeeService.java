@@ -128,6 +128,12 @@ public class EmployeeService {
 
   private String reverseGeocode(String lat, String lon) {
     try {
+      // Check if API key is available
+      if (apiKey == null || apiKey.trim().isEmpty()) {
+        System.out.println("Google Maps API key not configured, skipping reverse geocoding");
+        return "Location: " + lat + ", " + lon;
+      }
+
       String url = String.format(
           "https://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&key=%s",
           lat, lon, apiKey);

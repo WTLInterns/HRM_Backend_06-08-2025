@@ -55,7 +55,7 @@ java -jar target/demo-0.0.1-SNAPSHOT.jar
 #### **Step 4: Test Notifications**
 ```bash
 # Test FCM endpoint
-curl -X POST "https://api.managifyhr.com/api/fcm/send" \
+curl -X POST "http://localhost:8080/api/fcm/send" \
   -H "Content-Type: application/json" \
   -d '{
     "token": "your-device-token",

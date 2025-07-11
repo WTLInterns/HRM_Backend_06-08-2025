@@ -231,10 +231,32 @@ public class Attendance {
   @Column(columnDefinition = "TIME(0)")
   private LocalTime lunchOutTime;
 
+  // Additional fields to match database table structure
+  private String lunchPunchIn; // lunch_punch_in
+  private String lunchPunchOut; // lunch_punch_out
+  private String punchIn; // punch_in (string format)
+  private String punchOut; // punch_out (string format)
+
   private String workType;
 
   // Image path for work from field attendance
   private String imagePath;
+
+  // New fields for EasyTimePro integration
+  private String attendanceSource; // "BIOMETRIC", "MANUAL"
+  private String attendanceType; // "OFFICE", "WORK_FROM_FIELD"
+  private String fieldLocation; // Location for work from field
+  private String workDescription; // Description of work done
+
+  // Enhanced biometric integration fields
+  private String biometricDeviceId; // Device serial number
+  private String biometricUserId; // User ID on biometric device
+  private String verifyType; // "fingerprint", "face", "palm"
+  private String deviceSerial; // Terminal serial number
+  private String punchSource; // "BIOMETRIC", "MANUAL", "API"
+
+  @Column(columnDefinition = "TEXT")
+  private String rawData; // Raw data from biometric device
 
   @ManyToOne
   @JoinColumn(name = "employee_id")
@@ -404,6 +426,144 @@ public class Attendance {
    */
   public void setImagePath(String imagePath) {
     this.imagePath = imagePath;
+  }
+
+  /**
+   * @return String return the attendanceSource
+   */
+  public String getAttendanceSource() {
+    return attendanceSource;
+  }
+
+  /**
+   * @param attendanceSource the attendanceSource to set
+   */
+  public void setAttendanceSource(String attendanceSource) {
+    this.attendanceSource = attendanceSource;
+  }
+
+  /**
+   * @return String return the attendanceType
+   */
+  public String getAttendanceType() {
+    return attendanceType;
+  }
+
+  /**
+   * @param attendanceType the attendanceType to set
+   */
+  public void setAttendanceType(String attendanceType) {
+    this.attendanceType = attendanceType;
+  }
+
+  /**
+   * @return String return the fieldLocation
+   */
+  public String getFieldLocation() {
+    return fieldLocation;
+  }
+
+  /**
+   * @param fieldLocation the fieldLocation to set
+   */
+  public void setFieldLocation(String fieldLocation) {
+    this.fieldLocation = fieldLocation;
+  }
+
+  /**
+   * @return String return the workDescription
+   */
+  public String getWorkDescription() {
+    return workDescription;
+  }
+
+  /**
+   * @param workDescription the workDescription to set
+   */
+  public void setWorkDescription(String workDescription) {
+    this.workDescription = workDescription;
+  }
+
+  // Getters and setters for biometric fields
+  public String getBiometricDeviceId() {
+    return biometricDeviceId;
+  }
+
+  public void setBiometricDeviceId(String biometricDeviceId) {
+    this.biometricDeviceId = biometricDeviceId;
+  }
+
+  public String getBiometricUserId() {
+    return biometricUserId;
+  }
+
+  public void setBiometricUserId(String biometricUserId) {
+    this.biometricUserId = biometricUserId;
+  }
+
+  public String getVerifyType() {
+    return verifyType;
+  }
+
+  public void setVerifyType(String verifyType) {
+    this.verifyType = verifyType;
+  }
+
+  public String getDeviceSerial() {
+    return deviceSerial;
+  }
+
+  public void setDeviceSerial(String deviceSerial) {
+    this.deviceSerial = deviceSerial;
+  }
+
+  public String getPunchSource() {
+    return punchSource;
+  }
+
+  public void setPunchSource(String punchSource) {
+    this.punchSource = punchSource;
+  }
+
+  public String getRawData() {
+    return rawData;
+  }
+
+  public void setRawData(String rawData) {
+    this.rawData = rawData;
+  }
+
+  // Getters and setters for additional fields
+  public String getLunchPunchIn() {
+    return lunchPunchIn;
+  }
+
+  public void setLunchPunchIn(String lunchPunchIn) {
+    this.lunchPunchIn = lunchPunchIn;
+  }
+
+  public String getLunchPunchOut() {
+    return lunchPunchOut;
+  }
+
+  public void setLunchPunchOut(String lunchPunchOut) {
+    this.lunchPunchOut = lunchPunchOut;
+  }
+
+  public String getPunchIn() {
+    return punchIn;
+  }
+
+  public void setPunchIn(String punchIn) {
+    this.punchIn = punchIn;
+  }
+
+  public String getPunchOut() {
+    return punchOut;
+  }
+
+  public void setPunchOut(String punchOut) {
+    this.punchOut = punchOut;
   }
 
 }
