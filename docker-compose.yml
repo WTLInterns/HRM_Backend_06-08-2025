@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  hrm-backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - DATABASE_URL=jdbc:mysql://mysql:3306/new_hrm?allowMultiQueries=true&useSSL=false&serverTimezone=UTC
+      - DATABASE_USERNAME=hrm_user
+      - DATABASE_PASSWORD=hrm_password
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    depends_on:
+      - mysql
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - hrm-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=new_hrm
+      - MYSQL_USER=hrm_user
+      - MYSQL_PASSWORD=hrm_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - hrm-network
+
+  easywdms:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=easywdms
+      - MYSQL_USER=easywdms_user
+      - MYSQL_PASSWORD=easywdms_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - easywdms_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - hrm-network
+
+volumes:
+  mysql_data:
+  easywdms_data:
+  uploads:
+
+networks:
+  hrm-network:
+    driver: bridge

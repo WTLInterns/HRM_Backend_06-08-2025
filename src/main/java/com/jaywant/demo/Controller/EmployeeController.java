@@ -843,22 +843,50 @@ public class EmployeeController {
         entity.setReason(incoming.getReason());
       }
 
-      // only overwrite times if they came in the payload
+      // Apply "First Punch In Only" logic for MOBILE source
       if (incoming.getPunchInTime() != null) {
-        entity.setPunchInTime(incoming.getPunchInTime());
+        // Only set punch in if no punch-in exists yet (from any source)
+        if (entity.getPunchInTime() == null) {
+          entity.setPunchInTime(incoming.getPunchInTime());
+          entity.setPunchIn(incoming.getPunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+          entity.setAttendanceSource("MOBILE");
+          entity.setPunchSource("MOBILE");
+          System.out.println("✅ First punch IN recorded (MOBILE): " + incoming.getPunchInTime());
+        } else {
+          System.out.println("⚠️ Duplicate punch IN ignored (MOBILE) - keeping existing punch: " +
+              entity.getPunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) +
+              " (Source: " + (entity.getPunchSource() != null ? entity.getPunchSource() : "UNKNOWN") + ")");
+          // Don't update punch in time, but continue processing other fields
+        }
       }
+
+      // Lunch times - always allow updates from mobile
       if (incoming.getLunchInTime() != null) {
         entity.setLunchInTime(incoming.getLunchInTime());
+        entity.setLunchPunchIn(
+            incoming.getLunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+        System.out.println("✅ Lunch IN recorded (MOBILE): " + incoming.getLunchInTime());
       }
       if (incoming.getLunchOutTime() != null) {
         entity.setLunchOutTime(incoming.getLunchOutTime());
-      }
-      if (incoming.getPunchOutTime() != null) {
-        entity.setPunchOutTime(incoming.getPunchOutTime());
+        entity.setLunchPunchOut(
+            incoming.getLunchOutTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+        System.out.println("✅ Lunch OUT recorded (MOBILE): " + incoming.getLunchOutTime());
       }
 
-      if (incoming.getPunchOutTime() != null)
+      // Punch out - always allow updates (latest wins)
+      if (incoming.getPunchOutTime() != null) {
         entity.setPunchOutTime(incoming.getPunchOutTime());
+        entity.setPunchOut(incoming.getPunchOutTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+        // Update source only if this is setting punch out
+        if (entity.getAttendanceSource() == null) {
+          entity.setAttendanceSource("MOBILE");
+        }
+        if (entity.getPunchSource() == null) {
+          entity.setPunchSource("MOBILE");
+        }
+        System.out.println("✅ Punch OUT recorded (MOBILE): " + incoming.getPunchOutTime());
+      }
 
       // ✏️ copy workType
       if (incoming.getWorkType() != null) {

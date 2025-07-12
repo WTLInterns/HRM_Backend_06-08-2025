@@ -25,9 +25,8 @@ public class SimpleRealtimeBiometricController {
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+                    "success", false,
+                    "error", e.getMessage()));
         }
     }
 
@@ -41,9 +40,8 @@ public class SimpleRealtimeBiometricController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+                    "success", false,
+                    "error", e.getMessage()));
         }
     }
 
@@ -53,9 +51,25 @@ public class SimpleRealtimeBiometricController {
     @GetMapping("/health")
     public ResponseEntity<?> healthCheck() {
         return ResponseEntity.ok(Map.of(
-            "status", "OK",
-            "service", "SimpleRealtimeBiometricService",
-            "message", "Real-time sync service is running"
-        ));
+                "status", "OK",
+                "service", "SimpleRealtimeBiometricService",
+                "message", "Real-time sync service is running"));
+    }
+
+    /**
+     * Trigger auto punch-out process manually
+     */
+    @PostMapping("/auto-punch-out")
+    public ResponseEntity<?> triggerAutoPunchOut() {
+        try {
+            realtimeService.autoProcessMissingPunchOut();
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Auto punch-out process completed"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()));
+        }
     }
 }
