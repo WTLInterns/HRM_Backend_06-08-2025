@@ -1,5 +1,7 @@
 HELP.md
-target/
+# Include compiled classes but exclude large JAR files
+target/*.jar
+target/*.jar.original
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
