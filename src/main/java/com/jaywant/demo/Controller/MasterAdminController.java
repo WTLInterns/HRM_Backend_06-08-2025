@@ -153,7 +153,8 @@ public class MasterAdminController {
       @RequestParam(value = "longitude", required = false) Double longitude,
       @RequestParam("packageType") String packageType,
       @RequestParam(value = "customCount", required = false) Integer customCount,
-      @RequestParam("emailServerPassword") String emailServerPassword) {
+      @RequestParam("emailServerPassword") String emailServerPassword,
+      @RequestParam(value = "deviceSerialNumber", required = false) String deviceSerialNumber) {
     try {
       Subadmin subadmin = new Subadmin();
       subadmin.setName(name);
@@ -169,6 +170,7 @@ public class MasterAdminController {
       subadmin.setCompanyurl(companyurl);
       subadmin.setLatitude(latitude);
       subadmin.setLongitude(longitude);
+      subadmin.setDeviceSerialNumber(deviceSerialNumber);
       // Role will be set by default in the entity ("SUB_ADMIN")
 
       Subadmin saved = masterAdminService.createSubAdmin(subadmin, id, stampImg, signature, companylogo, packageType,

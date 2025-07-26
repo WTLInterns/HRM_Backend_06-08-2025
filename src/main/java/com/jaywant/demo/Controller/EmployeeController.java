@@ -39,6 +39,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jaywant.demo.DTO.SalaryDTO;
 import com.jaywant.demo.Entity.Attendance;
 import com.jaywant.demo.Entity.Employee;
+import com.jaywant.demo.Entity.EmployeeDeviceMapping;
 import com.jaywant.demo.Repo.AttendanceRepo;
 import com.jaywant.demo.Repo.EmployeeRepo;
 import com.jaywant.demo.Repo.SubAdminRepo;
@@ -46,6 +47,7 @@ import com.jaywant.demo.Service.AttendanceService;
 import com.jaywant.demo.Service.EmployeeEmailService;
 import com.jaywant.demo.Service.EmployeePasswordResetService;
 import com.jaywant.demo.Service.EmployeeService;
+import com.jaywant.demo.Service.EmployeeDeviceMappingService;
 import com.jaywant.demo.Service.ImageUploadService;
 import com.jaywant.demo.Service.SalaryService;
 import com.jaywant.demo.Service.SalarySlipPDFService;
@@ -84,6 +86,9 @@ public class EmployeeController {
 
   @Autowired
   private SubAdminService subAdminService;
+
+  @Autowired
+  private EmployeeDeviceMappingService deviceMappingService;
 
   @Autowired
   private ImageUploadService imageUploadService;
@@ -182,7 +187,7 @@ public class EmployeeController {
       @RequestParam(required = false) String firstName,
       @RequestParam(required = false) String lastName,
       @RequestParam(required = false) String email,
-      @RequestParam(required = false) Long phone,
+      @RequestParam(required = false) String phone,
       @RequestParam(required = false) String aadharNo,
       @RequestParam(required = false) String panCard,
       @RequestParam(required = false) String education,
@@ -213,13 +218,24 @@ public class EmployeeController {
           .body("No employee with ID '" + empId + "' under SubAdmin " + subadminId);
     }
 
+    // Convert phone string to Long
+    Long phoneNumber = null;
+    if (phone != null && !phone.trim().isEmpty()) {
+      try {
+        phoneNumber = Long.parseLong(phone.trim());
+      } catch (NumberFormatException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body("Invalid phone number format: " + phone);
+      }
+    }
+
     try {
       // 2) delegate to your service using the empId you just found
       Employee updated;
       updated = subAdminService.updateEmployee(
           subadminId,
           empId, // <-- use the real ID
-          firstName, lastName, email, phone,
+          firstName, lastName, email, phoneNumber,
           aadharNo, panCard, education, bloodGroup,
           jobRole, gender, address,
           birthDate, joiningDate, status,
@@ -240,20 +256,99 @@ public class EmployeeController {
   @DeleteMapping("/{subadminId}/delete/{empId}")
   public ResponseEntity<?> deleteEmployee(@PathVariable int subadminId,
       @PathVariable int empId) {
-    Optional<Employee> employeeOpt = employeeRepository.findById(empId);
-    if (!employeeOpt.isPresent()) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
-          .body("Employee not found for ID: " + empId);
-    }
+    try {
+      System.out.println("=== DELETE EMPLOYEE REQUEST ===");
+      System.out.println("SubAdmin ID: " + subadminId);
+      System.out.println("Employee ID: " + empId);
 
-    Employee employee = employeeOpt.get();
-    if (employee.getSubadmin() == null || employee.getSubadmin().getId() != subadminId) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body("Employee does not belong to SubAdmin ID: " + subadminId);
-    }
+      Optional<Employee> employeeOpt = employeeRepository.findById(empId);
+      if (!employeeOpt.isPresent()) {
+        System.out.println("Employee not found for ID: " + empId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body("Employee not found for ID: " + empId);
+      }
 
-    employeeRepository.delete(employee);
-    return ResponseEntity.ok("Employee deleted successfully.");
+      Employee employee = employeeOpt.get();
+      System.out.println("Found employee: " + employee.getFirstName() + " " + employee.getLastName());
+
+      if (employee.getSubadmin() == null || employee.getSubadmin().getId() != subadminId) {
+        System.out.println("Employee does not belong to SubAdmin ID: " + subadminId);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body("Employee does not belong to SubAdmin ID: " + subadminId);
+      }
+
+      System.out.println("Attempting to delete employee...");
+
+      // Check for device mappings first and remove them if they exist
+      System.out.println("Checking for device mappings...");
+      try {
+        List<EmployeeDeviceMapping> mappings = deviceMappingService.getEmployeeMappings(empId);
+        System.out.println("Found " + mappings.size() + " device mappings for employee " + empId);
+
+        if (!mappings.isEmpty()) {
+          System.out.println("Removing device mappings...");
+          deviceMappingService.removeAllEmployeeMappings(empId);
+          System.out.println("Device mappings removed successfully.");
+        }
+      } catch (Exception mappingException) {
+        System.err.println("Error handling device mappings: " + mappingException.getMessage());
+        mappingException.printStackTrace();
+        throw new RuntimeException("Failed to handle device mappings: " + mappingException.getMessage());
+      }
+
+      // Now delete the employee
+      System.out.println("Deleting employee from database...");
+      try {
+        employeeRepository.delete(employee);
+        System.out.println("Employee deleted successfully!");
+      } catch (Exception deleteException) {
+        System.err.println("Error deleting employee: " + deleteException.getMessage());
+        deleteException.printStackTrace();
+        throw new RuntimeException("Failed to delete employee: " + deleteException.getMessage());
+      }
+
+      return ResponseEntity.ok("Employee deleted successfully.");
+
+    } catch (Exception e) {
+      System.err.println("=== DELETE EMPLOYEE ERROR ===");
+      System.err.println("Error deleting employee ID: " + empId);
+      System.err.println("Error message: " + e.getMessage());
+      System.err.println("Error class: " + e.getClass().getSimpleName());
+      e.printStackTrace();
+
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Failed to delete employee: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Test endpoint to check employee delete prerequisites
+   */
+  @GetMapping("/{subadminId}/delete-test/{empId}")
+  public ResponseEntity<?> testEmployeeDelete(@PathVariable int subadminId, @PathVariable int empId) {
+    try {
+      Map<String, Object> result = new HashMap<>();
+
+      // Check if employee exists
+      Optional<Employee> employeeOpt = employeeRepository.findById(empId);
+      result.put("employeeExists", employeeOpt.isPresent());
+
+      if (employeeOpt.isPresent()) {
+        Employee employee = employeeOpt.get();
+        result.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
+        result.put("belongsToSubadmin", employee.getSubadmin() != null && employee.getSubadmin().getId() == subadminId);
+
+        // Check device mappings
+        List<EmployeeDeviceMapping> mappings = deviceMappingService.getEmployeeMappings(empId);
+        result.put("deviceMappingsCount", mappings.size());
+        result.put("deviceMappings", mappings);
+      }
+
+      return ResponseEntity.ok(result);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Test failed: " + e.getMessage());
+    }
   }
 
   /**
@@ -270,6 +365,24 @@ public class EmployeeController {
     Employee employee = employeeOpt.get();
     String fullName = employee.getFirstName() + " " + employee.getLastName();
     return ResponseEntity.ok(fullName);
+  }
+
+  /**
+   * Get employees by device serial number for biometric device integration.
+   */
+  @GetMapping("/device/{deviceSerialNumber}")
+  public ResponseEntity<?> getEmployeesByDeviceSerialNumber(@PathVariable String deviceSerialNumber) {
+    try {
+      List<Employee> employees = employeeRepository.findByDeviceSerialNumber(deviceSerialNumber);
+      if (employees.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body("No employees found for device serial number: " + deviceSerialNumber);
+      }
+      return ResponseEntity.ok(employees);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Error retrieving employees: " + e.getMessage());
+    }
   }
 
   /**
@@ -843,50 +956,22 @@ public class EmployeeController {
         entity.setReason(incoming.getReason());
       }
 
-      // Apply "First Punch In Only" logic for MOBILE source
+      // only overwrite times if they came in the payload
       if (incoming.getPunchInTime() != null) {
-        // Only set punch in if no punch-in exists yet (from any source)
-        if (entity.getPunchInTime() == null) {
-          entity.setPunchInTime(incoming.getPunchInTime());
-          entity.setPunchIn(incoming.getPunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
-          entity.setAttendanceSource("MOBILE");
-          entity.setPunchSource("MOBILE");
-          System.out.println("✅ First punch IN recorded (MOBILE): " + incoming.getPunchInTime());
-        } else {
-          System.out.println("⚠️ Duplicate punch IN ignored (MOBILE) - keeping existing punch: " +
-              entity.getPunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")) +
-              " (Source: " + (entity.getPunchSource() != null ? entity.getPunchSource() : "UNKNOWN") + ")");
-          // Don't update punch in time, but continue processing other fields
-        }
+        entity.setPunchInTime(incoming.getPunchInTime());
       }
-
-      // Lunch times - always allow updates from mobile
       if (incoming.getLunchInTime() != null) {
         entity.setLunchInTime(incoming.getLunchInTime());
-        entity.setLunchPunchIn(
-            incoming.getLunchInTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
-        System.out.println("✅ Lunch IN recorded (MOBILE): " + incoming.getLunchInTime());
       }
       if (incoming.getLunchOutTime() != null) {
         entity.setLunchOutTime(incoming.getLunchOutTime());
-        entity.setLunchPunchOut(
-            incoming.getLunchOutTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
-        System.out.println("✅ Lunch OUT recorded (MOBILE): " + incoming.getLunchOutTime());
       }
-
-      // Punch out - always allow updates (latest wins)
       if (incoming.getPunchOutTime() != null) {
         entity.setPunchOutTime(incoming.getPunchOutTime());
-        entity.setPunchOut(incoming.getPunchOutTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
-        // Update source only if this is setting punch out
-        if (entity.getAttendanceSource() == null) {
-          entity.setAttendanceSource("MOBILE");
-        }
-        if (entity.getPunchSource() == null) {
-          entity.setPunchSource("MOBILE");
-        }
-        System.out.println("✅ Punch OUT recorded (MOBILE): " + incoming.getPunchOutTime());
       }
+
+      if (incoming.getPunchOutTime() != null)
+        entity.setPunchOutTime(incoming.getPunchOutTime());
 
       // ✏️ copy workType
       if (incoming.getWorkType() != null) {
@@ -1068,7 +1153,7 @@ public class EmployeeController {
         result.put("workType", att.getWorkType());
         result.put("status", att.getStatus());
         result.put("imagePath", att.getImagePath());
-        result.put("imageUrl", "http://localhost:8080/images/" + att.getImagePath().replace("images/", ""));
+        result.put("imageUrl", "https://api.managifyhr.com/images/" + att.getImagePath().replace("images/", ""));
         result.put("punchInTime", att.getPunchInTime() != null ? att.getPunchInTime().toString() : null);
         result.put("punchOutTime", att.getPunchOutTime() != null ? att.getPunchOutTime().toString() : null);
         return ResponseEntity.ok(result);
@@ -1112,7 +1197,7 @@ public class EmployeeController {
           result.put("workType", att.getWorkType());
           result.put("status", att.getStatus());
           result.put("imagePath", att.getImagePath());
-          result.put("imageUrl", "http://localhost:8080/images/" + att.getImagePath().replace("images/", ""));
+          result.put("imageUrl", "https://api.managifyhr.com/images/" + att.getImagePath().replace("images/", ""));
           result.put("punchInTime", att.getPunchInTime() != null ? att.getPunchInTime().toString() : null);
           result.put("punchOutTime", att.getPunchOutTime() != null ? att.getPunchOutTime().toString() : null);
           results.add(result);

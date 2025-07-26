@@ -56,6 +56,8 @@ public class Employee {
   private Boolean notificationsEnabled = true;
   private LocalDateTime fcmTokenUpdatedAt;
 
+  private String deviceSerialNumber; // Device serial number for biometric mapping
+
   public String getFcmToken() {
     return fcmToken;
   }
@@ -81,6 +83,14 @@ public class Employee {
     this.fcmTokenUpdatedAt = fcmTokenUpdatedAt;
   }
 
+  public String getDeviceSerialNumber() {
+    return deviceSerialNumber;
+  }
+
+  public void setDeviceSerialNumber(String deviceSerialNumber) {
+    this.deviceSerialNumber = deviceSerialNumber;
+  }
+
   @ManyToOne
   @JoinColumn(name = "subadmin_id")
   @JsonIgnoreProperties({ "employee", "leaves", "certificates", "masterAdmin" })
@@ -97,8 +107,6 @@ public class Employee {
   @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
   @JsonIgnore // prevents recursion
   private List<LeaveForm> leaves;
-
-
 
   public Employee() {
   }

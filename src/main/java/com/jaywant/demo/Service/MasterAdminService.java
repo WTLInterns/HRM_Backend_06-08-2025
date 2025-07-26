@@ -24,6 +24,9 @@ public class MasterAdminService {
   @Autowired
   private SubAdminRepo subAdminRepo;
 
+  @Autowired
+  private EmployeeDeviceMappingService deviceMappingService;
+
   // The directory where files will be stored
   private final String uploadDir = "src/main/resources/static/images/profile/";
 
@@ -106,7 +109,7 @@ public class MasterAdminService {
 
   public Subadmin createSubAdmin(Subadmin subAdmin, Long masterAdminId,
       MultipartFile stampImg, MultipartFile signature, MultipartFile companylogo, String packageType,
-      Integer customCount , String emailServerPassword) {
+      Integer customCount, String emailServerPassword) {
 
     MasterAdmin masterAdmin = masterRepo.findById(masterAdminId)
         .orElseThrow(() -> new RuntimeException("Master Admin not found with ID: " + masterAdminId));
@@ -147,7 +150,13 @@ public class MasterAdminService {
       subAdmin.setCompanylogo(saveFile(companylogo));
     }
 
-    return subAdminRepo.save(subAdmin);
+    // Save subadmin first
+    Subadmin savedSubAdmin = subAdminRepo.save(subAdmin);
+
+    // Handle automatic device mapping for existing employees
+    deviceMappingService.handleNewSubadminDeviceMapping(savedSubAdmin);
+
+    return savedSubAdmin;
   }
 
   // Add this to MasterAdminService.java

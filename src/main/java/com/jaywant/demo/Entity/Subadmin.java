@@ -48,6 +48,7 @@ public class Subadmin {
     private Integer packageCount; // number of employees allowed
 
     private String emailServerPassword;
+    private String deviceSerialNumber; // Device serial number for biometric mapping
 
     public String getFcmToken() {
 
@@ -77,7 +78,6 @@ public class Subadmin {
     private String fcmToken;
     private Boolean notificationsEnabled = true;
     private LocalDateTime fcmTokenUpdatedAt;
-
 
     // getters & setters
     public Double getLatitude() {
@@ -285,7 +285,7 @@ public class Subadmin {
             String phoneno, String password, String registercompanyname, String companylogo, String roll, String gstno,
             String status, String cinno, String companyurl, String address, Double latitude, Double longitude,
             MasterAdmin masterAdmin, List<Employee> employee, List<Certificate> certificates, String packageType,
-            Integer packageCount) {
+            Integer packageCount, String deviceSerialNumber) {
         this.id = id;
         this.name = name;
         this.lastname = lastname;
@@ -309,6 +309,7 @@ public class Subadmin {
         this.certificates = certificates;
         this.packageType = packageType;
         this.packageCount = packageCount;
+        this.deviceSerialNumber = deviceSerialNumber;
     }
 
     public Subadmin() {
@@ -329,6 +330,14 @@ public class Subadmin {
 
     public void setEmailServerPassword(String emailServerPassword) {
         this.emailServerPassword = emailServerPassword;
+    }
+
+    public String getDeviceSerialNumber() {
+        return deviceSerialNumber;
+    }
+
+    public void setDeviceSerialNumber(String deviceSerialNumber) {
+        this.deviceSerialNumber = deviceSerialNumber;
     }
 
 }

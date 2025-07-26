@@ -191,7 +191,8 @@ public class SubAdminController {
       @RequestParam(value = "companylogo", required = false) MultipartFile companylogo,
       @RequestParam(value = "packageType", required = false) String packageType,
       @RequestParam(value = "customCount", required = false) Integer customCount,
-      @RequestParam(value = "emailServerPassword", required = false) String emailServerPassword) {
+      @RequestParam(value = "emailServerPassword", required = false) String emailServerPassword,
+      @RequestParam(value = "deviceSerialNumber", required = false) String deviceSerialNumber) {
     Optional<Subadmin> existing = subAdminRepo.findById(id);
     if (!existing.isPresent()) {
       return ResponseEntity
@@ -212,7 +213,7 @@ public class SubAdminController {
           stampImg,
           signature,
           companylogo, latitude, longitude,
-          packageType, customCount, emailServerPassword);
+          packageType, customCount, emailServerPassword, deviceSerialNumber);
       return ResponseEntity.ok(updated);
 
     } catch (RuntimeException ex) {
@@ -400,7 +401,7 @@ public class SubAdminController {
       @RequestParam(required = false) String firstName,
       @RequestParam(required = false) String lastName,
       @RequestParam(required = false) String email,
-      @RequestParam(required = false) Long phone,
+      @RequestParam(required = false) String phone,
       @RequestParam(required = false) String aadharNo,
       @RequestParam(required = false) String panCard,
       @RequestParam(required = false) String education,
@@ -422,6 +423,17 @@ public class SubAdminController {
       @RequestParam(required = false) String department) {
 
     try {
+      // Convert phone string to Long
+      Long phoneNumber = null;
+      if (phone != null && !phone.trim().isEmpty()) {
+        try {
+          phoneNumber = Long.parseLong(phone.trim());
+        } catch (NumberFormatException e) {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+              .body("Invalid phone number format: " + phone);
+        }
+      }
+
       // Check package limit
       Subadmin subadmin = subAdminRepo.findById(subadminId)
           .orElseThrow(() -> new RuntimeException("Subadmin not found with ID: " + subadminId));
@@ -433,7 +445,7 @@ public class SubAdminController {
       }
       Employee created = subAdminService.addEmployee(
           subadminId,
-          firstName, lastName, email, phone, aadharNo, panCard,
+          firstName, lastName, email, phoneNumber, aadharNo, panCard,
           education, bloodGroup, jobRole, gender, address,
           birthDate, joiningDate, status, bankName,
           bankAccountNo, bankIfscCode, branchName, salary,

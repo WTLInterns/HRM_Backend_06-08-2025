@@ -73,10 +73,7 @@ public interface EmployeeDeviceMappingRepo extends JpaRepository<EmployeeDeviceM
         Long countEnrolledEmployeesByTerminal(@Param("terminalSerial") String terminalSerial);
 
         // Find all mappings for a subadmin with employee details
-        @Query("SELECT edm FROM EmployeeDeviceMapping edm " +
-                        "JOIN FETCH edm.employee e " +
-                        "WHERE edm.subadminId = :subadminId " +
-                        "ORDER BY e.fullName")
+        @Query("SELECT edm FROM EmployeeDeviceMapping edm WHERE edm.subadminId = :subadminId")
         List<EmployeeDeviceMapping> findBySubadminIdWithEmployeeDetails(@Param("subadminId") Integer subadminId);
 
         // Enhanced methods for multi-device, multi-subadmin mapping

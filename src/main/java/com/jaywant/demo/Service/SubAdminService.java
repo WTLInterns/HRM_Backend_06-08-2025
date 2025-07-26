@@ -167,6 +167,9 @@ public class SubAdminService {
   @Autowired
   private EmployeeRepo employeeRepo;
 
+  @Autowired
+  private EmployeeDeviceMappingService deviceMappingService;
+
   private final String uploadDir = "src/main/resources/static/images/profile/";
 
   public Employee addEmployee(
@@ -221,6 +224,9 @@ public class SubAdminService {
     e.setRole("EMPLOYEE");
     e.setSubadmin(subadmin);
 
+    // Map employee to subadmin's device serial number
+    e.setDeviceSerialNumber(subadmin.getDeviceSerialNumber());
+
     e.setPassword(phone.toString());
 
     // save each image if present
@@ -234,7 +240,13 @@ public class SubAdminService {
       e.setPanimg(saveFile(panimg));
     }
 
-    return employeeRepo.save(e);
+    // Save employee first
+    Employee savedEmployee = employeeRepo.save(e);
+
+    // Handle automatic device mapping for new employee
+    deviceMappingService.handleNewEmployeeDeviceMapping(savedEmployee);
+
+    return savedEmployee;
   }
 
   public Employee updateEmployee(
@@ -295,6 +307,11 @@ public class SubAdminService {
     // always preserve role
     e.setRole("EMPLOYEE");
 
+    // Update device serial number mapping from subadmin
+    if (e.getSubadmin() != null && e.getSubadmin().getDeviceSerialNumber() != null) {
+      e.setDeviceSerialNumber(e.getSubadmin().getDeviceSerialNumber());
+    }
+
     e.setPassword(password);
 
     // update images if provided
@@ -308,7 +325,18 @@ public class SubAdminService {
       e.setPanimg(saveFile(panimg));
     }
 
-    return employeeRepo.save(e);
+    // Save employee first
+    Employee savedEmployee = employeeRepo.save(e);
+
+    // Update device mapping if subadmin has device serial number
+    if (savedEmployee.getSubadmin() != null &&
+        savedEmployee.getSubadmin().getDeviceSerialNumber() != null &&
+        !savedEmployee.getSubadmin().getDeviceSerialNumber().trim().isEmpty()) {
+      deviceMappingService.createEmployeeDeviceMapping(
+          savedEmployee, savedEmployee.getSubadmin().getDeviceSerialNumber());
+    }
+
+    return savedEmployee;
   }
 
   // Get Subadmin by email
@@ -468,10 +496,13 @@ public class SubAdminService {
   public Subadmin updateSubAdmin(int id, String name, String lastname, String email, String phoneno,
       String registercompanyname, String status, String gstno, String cinno, String companyurl, String address,
       MultipartFile stampImg, MultipartFile signature, MultipartFile companylogo, Double latitude, Double longitude,
-      String packageType, Integer customCount, String emailServerPassword) {
+      String packageType, Integer customCount, String emailServerPassword, String deviceSerialNumber) {
 
     Subadmin subAdmin = repo.findById(id)
         .orElseThrow(() -> new RuntimeException("Subadmin not found with ID: " + id));
+
+    // Store old device serial number BEFORE updating
+    String oldDeviceSerial = subAdmin.getDeviceSerialNumber();
 
     // Update basic fields
     subAdmin.setName(name);
@@ -487,6 +518,7 @@ public class SubAdminService {
     subAdmin.setLatitude(latitude);
     subAdmin.setLongitude(longitude);
     subAdmin.setEmailServerPassword(emailServerPassword);
+    subAdmin.setDeviceSerialNumber(deviceSerialNumber);
 
     // Package logic (null-safe)
     if (packageType != null && !packageType.trim().isEmpty()) {
@@ -527,7 +559,14 @@ public class SubAdminService {
       subAdmin.setCompanylogo(saveFile(companylogo));
     }
 
-    return repo.save(subAdmin);
+    // Save subadmin first
+    Subadmin savedSubAdmin = repo.save(subAdmin);
+
+    // Handle device mapping changes
+    deviceMappingService.updateSubadminDeviceMapping(
+        savedSubAdmin.getId(), oldDeviceSerial, savedSubAdmin.getDeviceSerialNumber());
+
+    return savedSubAdmin;
   }
 
   // public Subadmin updateSubAdmin(int id, String name, String lastname, String

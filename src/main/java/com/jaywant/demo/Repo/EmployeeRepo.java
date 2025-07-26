@@ -46,4 +46,7 @@ public interface EmployeeRepo extends JpaRepository<Employee, Integer> {
         // Enhanced method for multi-subadmin employee lookup with Integer types
         Employee findByEmpIdAndSubadminId(Integer empId, Integer subadminId);
 
+        // Find employees by device serial number for biometric device integration
+        List<Employee> findByDeviceSerialNumber(String deviceSerialNumber);
+
 }

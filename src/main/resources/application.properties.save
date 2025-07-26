@@ -113,3 +113,4 @@ spring.web.resources.static-locations=file:src/main/resources/static/,file:src/m
 
 file.upload-dir=src/main/resources/static/uploads
 
+

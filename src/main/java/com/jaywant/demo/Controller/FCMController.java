@@ -175,4 +175,106 @@ public class FCMController {
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
+
+    @GetMapping("/check-token/{employeeId}")
+    public ResponseEntity<Map<String, Object>> checkEmployeeToken(@PathVariable Integer employeeId) {
+        try {
+            System.out.println("?? Checking FCM token for employee ID: " + employeeId);
+
+            Employee employee = employeeRepository.findById(employeeId).orElse(null);
+
+            Map<String, Object> response = new HashMap<>();
+
+            if (employee == null) {
+                response.put("success", false);
+                response.put("message", "Employee not found with ID: " + employeeId);
+                return ResponseEntity.notFound().build();
+            }
+
+            response.put("success", true);
+            response.put("employeeId", employee.getEmpId());
+            response.put("employeeName", employee.getFullName());
+            response.put("email", employee.getEmail());
+
+            if (employee.getFcmToken() != null && !employee.getFcmToken().isEmpty()) {
+                response.put("hasToken", true);
+                response.put("tokenLength", employee.getFcmToken().length());
+                response.put("tokenPreview",
+                        employee.getFcmToken().substring(0, Math.min(30, employee.getFcmToken().length())) + "...");
+                response.put("fullToken", employee.getFcmToken());
+                response.put("tokenUpdatedAt", employee.getFcmTokenUpdatedAt());
+                response.put("notificationsEnabled", employee.getNotificationsEnabled());
+
+                System.out.println("? Employee: " + employee.getFullName());
+                System.out.println("   Token Length: " + employee.getFcmToken().length());
+                System.out.println("   Token Preview: "
+                        + employee.getFcmToken().substring(0, Math.min(30, employee.getFcmToken().length())) + "...");
+                System.out.println("   Full Token: " + employee.getFcmToken());
+                System.out.println("   Updated At: " + employee.getFcmTokenUpdatedAt());
+            } else {
+                response.put("hasToken", false);
+                response.put("message", "No FCM token found for this employee");
+                System.out.println("? No FCM token for employee: " + employee.getFullName());
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("? Error checking token: " + e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @PostMapping("/clear-invalid-tokens/{subadminId}")
+    public ResponseEntity<Map<String, Object>> clearInvalidTokens(@PathVariable Integer subadminId) {
+        try {
+            System.out.println("?? Clearing invalid FCM tokens for subadmin ID: " + subadminId);
+
+            List<Employee> employees = employeeRepository.findBySubadminId(subadminId);
+            int clearedCount = 0;
+
+            for (Employee employee : employees) {
+                if (employee.getFcmToken() != null && !employee.getFcmToken().isEmpty()) {
+                    // Test the token by trying to send a test message
+                    Map<String, String> testData = new HashMap<>();
+                    testData.put("type", "TOKEN_TEST");
+
+                    String result = firebaseService.sendNotification(employee.getFcmToken(), "Test", "Token validation",
+                            testData);
+
+                    // Check if notification failed (null result means failed)
+                    if (result == null) {
+                        System.out.println("? Invalid token for: " + employee.getFullName() + " - notification failed");
+                        employee.setFcmToken(null);
+                        employee.setFcmTokenUpdatedAt(null);
+                        employeeRepository.save(employee);
+                        clearedCount++;
+                    } else {
+                        System.out.println("? Valid token for: " + employee.getFullName());
+                    }
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Invalid tokens cleared successfully");
+            response.put("clearedCount", clearedCount);
+            response.put("totalEmployees", employees.size());
+
+            System.out.println(
+                    "?? Cleared " + clearedCount + " invalid tokens out of " + employees.size() + " employees");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("? Error clearing invalid tokens: " + e.getMessage());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
 }
