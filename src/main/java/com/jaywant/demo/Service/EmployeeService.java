@@ -222,7 +222,7 @@ public class EmployeeService {
           emp.getLatitude() != null && emp.getLongitude() != null) {
 
         // Check if employee has "work from field" attendance for today
-        boolean isWorkFromField = emp.getAttendance().stream()
+        boolean isWorkFromField = emp.getAttendances().stream()
             .anyMatch(attendance -> today.equals(attendance.getDate()) &&
                 "work from field".equals(attendance.getWorkType()));
 

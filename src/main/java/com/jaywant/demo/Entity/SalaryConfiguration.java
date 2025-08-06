@@ -52,12 +52,30 @@ public class SalaryConfiguration {
     @Column(name = "esi_percentage")
     private Double esiPercentage = 0.0; // ESI percentage
 
+    // Employee reference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
+
     // Constructors
     public SalaryConfiguration() {
     }
 
     public SalaryConfiguration(Subadmin subadmin) {
         this.subadmin = subadmin;
+    }
+
+    public SalaryConfiguration(Subadmin subadmin, Employee employee) {
+        this.subadmin = subadmin;
+        this.employee = employee;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
     }
 
     // Getters and Setters

@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.jaywant.demo.CertificateControllerTest
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.52 s -- in com.jaywant.demo.CertificateControllerTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 29.28 s -- in com.jaywant.demo.CertificateControllerTest

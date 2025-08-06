@@ -1,5 +1,6 @@
 package com.jaywant.demo.Controller;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,6 +41,7 @@ import com.jaywant.demo.DTO.SalaryDTO;
 import com.jaywant.demo.Entity.Attendance;
 import com.jaywant.demo.Entity.Employee;
 import com.jaywant.demo.Entity.EmployeeDeviceMapping;
+import com.jaywant.demo.Entity.Subadmin;
 import com.jaywant.demo.Repo.AttendanceRepo;
 import com.jaywant.demo.Repo.EmployeeRepo;
 import com.jaywant.demo.Repo.SubAdminRepo;
@@ -52,6 +54,7 @@ import com.jaywant.demo.Service.ImageUploadService;
 import com.jaywant.demo.Service.SalaryService;
 import com.jaywant.demo.Service.SalarySlipPDFService;
 import com.jaywant.demo.Service.SubAdminService;
+import com.jaywant.demo.Service.ExcelService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -92,6 +95,9 @@ public class EmployeeController {
 
   @Autowired
   private ImageUploadService imageUploadService;
+
+  @Autowired
+  private ExcelService excelService;
 
   // =====================================================
   // Attendance Endpoints
@@ -368,6 +374,90 @@ public class EmployeeController {
   }
 
   /**
+   * Get employee details by empId for a specific subadmin
+   * URL: GET /api/employee/{subadminId}/employee/by-id/{empId}
+   * This is more reliable than using name as empId is unique
+   */
+  @GetMapping("/{subadminId}/employee/by-id/{empId}")
+  public ResponseEntity<?> getEmployeeByEmpId(
+      @PathVariable int subadminId,
+      @PathVariable int empId) {
+
+    try {
+      System.out.println("🔍 Looking for employee ID: " + empId + " under subadmin: " + subadminId);
+
+      // Find employee by subadmin and empId (more reliable than name)
+      Employee employee = employeeRepository.findBySubadminIdAndEmpId(subadminId, empId);
+
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId + " under subadmin: " + subadminId));
+      }
+
+      System.out.println("✅ Found employee: " + employee.getFirstName() + " " + employee.getLastName() + " (ID: "
+          + employee.getEmpId() + ")");
+      return ResponseEntity.ok(employee);
+
+    } catch (Exception e) {
+      System.err.println("❌ Error finding employee by ID: " + e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error finding employee: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * Get employee details by name for a specific subadmin (kept for backward
+   * compatibility)
+   * URL: GET /api/employee/{subadminId}/employee/by-name/{employeeName}
+   * Note: Using empId is preferred to avoid conflicts with duplicate names
+   */
+  @GetMapping("/{subadminId}/employee/by-name/{employeeName}")
+  public ResponseEntity<?> getEmployeeByName(
+      @PathVariable int subadminId,
+      @PathVariable String employeeName) {
+
+    try {
+      System.out.println("🔍 Looking for employee: " + employeeName + " under subadmin: " + subadminId);
+      System.out.println("⚠️  Warning: Using name-based search. Consider using empId for better reliability.");
+
+      // Split the full name into first and last name
+      String[] nameParts = employeeName.trim().split("\\s+", 2);
+      if (nameParts.length < 2) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(Map.of("error", "Please provide both first and last name"));
+      }
+
+      String firstName = nameParts[0];
+      String lastName = nameParts[1];
+
+      // Find subadmin first
+      Optional<Subadmin> subadminOpt = subAdminRepo.findById(subadminId);
+      if (!subadminOpt.isPresent()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Subadmin not found"));
+      }
+
+      // Find employee by subadmin and name
+      Employee employee = employeeRepository.findBySubadminAndFirstNameAndLastNameIgnoreCase(
+          subadminOpt.get(), firstName, lastName);
+
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found: " + employeeName));
+      }
+
+      System.out.println("✅ Found employee: " + employee.getFirstName() + " " + employee.getLastName() + " (ID: "
+          + employee.getEmpId() + ")");
+      return ResponseEntity.ok(employee);
+
+    } catch (Exception e) {
+      System.err.println("❌ Error finding employee by name: " + e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error finding employee: " + e.getMessage()));
+    }
+  }
+
+  /**
    * Get employees by device serial number for biometric device integration.
    */
   @GetMapping("/device/{deviceSerialNumber}")
@@ -391,25 +481,57 @@ public class EmployeeController {
    * /api/subadmin/employee/{companyName}/{empId}/attendance/report?startDate=yyyy-MM-dd&endDate=yyyy-MM-dd
    */
   @GetMapping("/company/{companyName}/employee/{empId}/attendance/report")
-  public ResponseEntity<SalaryDTO> generateSalaryReport(
+  public ResponseEntity<?> generateSalaryReport(
       @PathVariable String companyName,
       @PathVariable int empId,
       @RequestParam String startDate,
       @RequestParam String endDate) {
 
-    Employee employee = employeeRepository.findById(empId).orElse(null);
-    // Check if the employee exists and its associated subadmin's company name
-    // matches.
-    if (employee == null || employee.getSubadmin() == null ||
-        !employee.getSubadmin().getRegistercompanyname().equalsIgnoreCase(companyName)) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+    try {
+      System.out.println("🔍 Generating salary report for:");
+      System.out.println("   Company: " + companyName);
+      System.out.println("   Employee ID: " + empId);
+      System.out.println("   Start Date: " + startDate);
+      System.out.println("   End Date: " + endDate);
+
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+
+      if (employee == null) {
+        System.err.println("❌ Employee not found with ID: " + empId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      if (employee.getSubadmin() == null) {
+        System.err.println("❌ Employee has no associated subadmin: " + empId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee has no associated subadmin"));
+      }
+
+      String employeeCompanyName = employee.getSubadmin().getRegistercompanyname();
+      System.out.println("   Employee's Company: " + employeeCompanyName);
+
+      if (!employeeCompanyName.equalsIgnoreCase(companyName)) {
+        System.err.println("❌ Company name mismatch. Expected: " + companyName + ", Found: " + employeeCompanyName);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee does not belong to company: " + companyName));
+      }
+
+      String start = startDate.trim();
+      String end = endDate.trim();
+
+      System.out.println("✅ Calling salaryService.generateSalaryReport...");
+      SalaryDTO report = salaryService.generateSalaryReport(employee, start, end);
+      System.out.println("✅ Salary report generated successfully");
+
+      return ResponseEntity.ok(report);
+
+    } catch (Exception e) {
+      System.err.println("❌ Exception in generateSalaryReport: " + e.getMessage());
+      e.printStackTrace();
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Internal server error: " + e.getMessage()));
     }
-
-    String start = startDate.trim();
-    String end = endDate.trim();
-
-    SalaryDTO report = salaryService.generateSalaryReport(employee, start, end);
-    return ResponseEntity.ok(report);
   }
 
   /**
@@ -510,6 +632,279 @@ public class EmployeeController {
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("error", "Error generating salary slips: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * GET: Generate salary slip for employee (Flutter/Mobile App)
+   * URL: GET
+   * /api/employee/{empId}/salary-slip-mobile?startDate=yyyy-MM-dd&endDate=yyyy-MM-dd
+   * This endpoint is simplified for mobile apps - only requires employee ID
+   */
+  @GetMapping("/{empId}/salary-slip-mobile")
+  public ResponseEntity<?> getSalarySlipForMobile(
+      @PathVariable int empId,
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+
+    try {
+      // Find employee by ID
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      String start = startDate.trim();
+      String end = endDate.trim();
+
+      // Generate salary slip
+      SalaryDTO salarySlip = salaryService.generateSalaryReport(employee, start, end);
+
+      // Prepare response with employee and salary details
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("employee", Map.of(
+          "empId", employee.getEmpId(),
+          "fullName", employee.getFullName(),
+          "email", employee.getEmail(),
+          "department", employee.getDepartment(),
+          "jobRole", employee.getJobRole(),
+          "phone", employee.getPhone(),
+          "joiningDate", employee.getJoiningDate(),
+          "bankName", employee.getBankName(),
+          "bankAccountNo", employee.getBankAccountNo(),
+          "bankIfscCode", employee.getBankIfscCode()));
+      response.put("salarySlip", salarySlip);
+      response.put("period", Map.of("startDate", start, "endDate", end));
+      response.put("generatedAt", java.time.LocalDateTime.now());
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error generating salary slip: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * GET: Get employee's recent salary slips (Flutter/Mobile App)
+   * URL: GET /api/employee/{empId}/salary-slips-mobile?months=3
+   * Returns salary slips for the last N months (default 3 months)
+   */
+  @GetMapping("/{empId}/salary-slips-mobile")
+  public ResponseEntity<?> getRecentSalarySlipsForMobile(
+      @PathVariable int empId,
+      @RequestParam(defaultValue = "3") int months) {
+
+    try {
+      // Find employee by ID
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      List<Map<String, Object>> salarySlips = new ArrayList<>();
+      java.time.LocalDate currentDate = java.time.LocalDate.now();
+
+      // Generate salary slips for the last N months
+      for (int i = 0; i < months; i++) {
+        try {
+          java.time.LocalDate monthStart = currentDate.minusMonths(i).withDayOfMonth(1);
+          java.time.LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+
+          String startDate = monthStart.toString();
+          String endDate = monthEnd.toString();
+
+          SalaryDTO salarySlip = salaryService.generateSalaryReport(employee, startDate, endDate);
+
+          Map<String, Object> monthlySlip = new HashMap<>();
+          monthlySlip.put("month", monthStart.getMonth().toString());
+          monthlySlip.put("year", monthStart.getYear());
+          monthlySlip.put("period", Map.of("startDate", startDate, "endDate", endDate));
+          monthlySlip.put("salarySlip", salarySlip);
+
+          salarySlips.add(monthlySlip);
+        } catch (Exception e) {
+          // Log error but continue with other months
+          System.err.println(
+              "Error generating salary slip for month " + i + " for employee " + empId + ": " + e.getMessage());
+        }
+      }
+
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("employee", Map.of(
+          "empId", employee.getEmpId(),
+          "fullName", employee.getFullName(),
+          "email", employee.getEmail(),
+          "department", employee.getDepartment(),
+          "jobRole", employee.getJobRole()));
+      response.put("monthsRequested", months);
+      response.put("salarySlipsGenerated", salarySlips.size());
+      response.put("salarySlips", salarySlips);
+      response.put("generatedAt", java.time.LocalDateTime.now());
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error generating salary slips: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * POST: Generate and save salary slip PDF for employee (Flutter/Mobile App)
+   * URL: POST
+   * /api/employee/{empId}/salary-slip-pdf-mobile?startDate=yyyy-MM-dd&endDate=yyyy-MM-dd
+   * This endpoint generates a PDF salary slip for mobile download
+   */
+  @PostMapping("/{empId}/salary-slip-pdf-mobile")
+  public ResponseEntity<?> generateSalarySlipPDFForMobile(
+      @PathVariable int empId,
+      @RequestParam String startDate,
+      @RequestParam String endDate) {
+
+    try {
+      // Find employee by ID
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      String start = startDate.trim();
+      String end = endDate.trim();
+
+      // Generate salary slip data
+      SalaryDTO salarySlip = salaryService.generateSalaryReport(employee, start, end);
+
+      // Use the existing salary slip service to generate PDF
+      String filePath = salarySlipPDFService.generateSalarySlipPDF(employee.getSubadmin().getId(), employee.getEmpId(),
+          start, end);
+
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("message", "Salary slip PDF generated successfully");
+      response.put("employee", Map.of(
+          "empId", employee.getEmpId(),
+          "fullName", employee.getFullName(),
+          "email", employee.getEmail(),
+          "department", employee.getDepartment()));
+      response.put("period", Map.of("startDate", start, "endDate", end));
+      response.put("filePath", filePath);
+      response.put("downloadUrl", "/api/employee/salary-slip/download?path=" + filePath);
+      response.put("generatedAt", java.time.LocalDateTime.now());
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error generating salary slip PDF: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * GET: Get all salary slip PDFs for employee (Flutter/Mobile App)
+   * URL: GET /api/employee/{empId}/salary-slip-pdfs-mobile
+   * Returns list of all generated salary slip PDFs for the employee
+   */
+  @GetMapping("/{empId}/salary-slip-pdfs-mobile")
+  public ResponseEntity<?> getSalarySlipPDFsForMobile(@PathVariable int empId) {
+
+    try {
+      // Find employee by ID
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      // Get all salary slip records for this employee
+      List<com.jaywant.demo.Entity.SalarySlip> salarySlips = salarySlipPDFService.getSalarySlipsByEmployee(employee);
+
+      // Convert to response format
+      List<Map<String, Object>> salarySlipFiles = new ArrayList<>();
+      for (com.jaywant.demo.Entity.SalarySlip slip : salarySlips) {
+        Map<String, Object> fileInfo = new HashMap<>();
+        fileInfo.put("id", slip.getId());
+        fileInfo.put("month", slip.getPaySlipMonth());
+        fileInfo.put("startDate", slip.getStartDate());
+        fileInfo.put("endDate", slip.getEndDate());
+        fileInfo.put("pdfPath", slip.getPdfPath());
+        fileInfo.put("netPayable", slip.getNetPayable());
+        fileInfo.put("grossSalary", slip.getGrossSalary());
+        fileInfo.put("totalDeductions", slip.getTotalDeductions());
+        fileInfo.put("workingDays", slip.getWorkingDays());
+        fileInfo.put("payableDays", slip.getPayableDays());
+        fileInfo.put("createdAt", slip.getCreatedAt());
+        fileInfo.put("downloadUrl", "/api/employee/salary-slip/download?path=" + slip.getPdfPath());
+        salarySlipFiles.add(fileInfo);
+      }
+
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("employee", Map.of(
+          "empId", employee.getEmpId(),
+          "fullName", employee.getFullName(),
+          "email", employee.getEmail(),
+          "department", employee.getDepartment()));
+      response.put("totalFiles", salarySlipFiles.size());
+      response.put("salarySlipFiles", salarySlipFiles);
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error retrieving salary slip PDFs: " + e.getMessage()));
+    }
+  }
+
+  /**
+   * GET: Get current month salary slip for employee (Flutter/Mobile App)
+   * URL: GET /api/employee/{empId}/current-month-salary-slip
+   * Returns salary slip for the current month (most common use case)
+   */
+  @GetMapping("/{empId}/current-month-salary-slip")
+  public ResponseEntity<?> getCurrentMonthSalarySlipForMobile(@PathVariable int empId) {
+
+    try {
+      // Find employee by ID
+      Employee employee = employeeRepository.findById(empId).orElse(null);
+      if (employee == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Employee not found with ID: " + empId));
+      }
+
+      // Get current month start and end dates
+      java.time.LocalDate currentDate = java.time.LocalDate.now();
+      java.time.LocalDate monthStart = currentDate.withDayOfMonth(1);
+      java.time.LocalDate monthEnd = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
+
+      String startDate = monthStart.toString();
+      String endDate = monthEnd.toString();
+
+      // Generate salary slip for current month
+      SalaryDTO salarySlip = salaryService.generateSalaryReport(employee, startDate, endDate);
+
+      Map<String, Object> response = new HashMap<>();
+      response.put("success", true);
+      response.put("employee", Map.of(
+          "empId", employee.getEmpId(),
+          "fullName", employee.getFullName(),
+          "email", employee.getEmail(),
+          "department", employee.getDepartment(),
+          "jobRole", employee.getJobRole(),
+          "phone", employee.getPhone(),
+          "bankName", employee.getBankName(),
+          "bankAccountNo", employee.getBankAccountNo()));
+      response.put("salarySlip", salarySlip);
+      response.put("currentMonth", currentDate.getMonth().toString());
+      response.put("currentYear", currentDate.getYear());
+      response.put("period", Map.of("startDate", startDate, "endDate", endDate));
+      response.put("generatedAt", java.time.LocalDateTime.now());
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Error generating current month salary slip: " + e.getMessage()));
     }
   }
 
@@ -1698,4 +2093,24 @@ public class EmployeeController {
           .body(Map.of("error", "Error downloading salary slip file: " + e.getMessage()));
     }
   }
+
+
+
+  @GetMapping("/{subadminId}/attendance/download")
+    public ResponseEntity<byte[]> downloadAttendanceExcel(@PathVariable int subadminId, @RequestParam String month) {
+        try {
+            List<Employee> employees = employeeRepository.findBySubadminId(subadminId);
+            if (employees.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            ByteArrayInputStream in = excelService.generateAttendanceExcel(employees, month);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Disposition", "attachment; filename=attendance-" + month + ".xlsx");
+
+            return ResponseEntity.ok().headers(headers).body(in.readAllBytes());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 }

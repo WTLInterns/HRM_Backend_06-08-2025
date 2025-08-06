@@ -154,6 +154,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.jaywant.demo.Entity.Employee;
+import com.jaywant.demo.Entity.EmployeeDeviceMapping;
 import com.jaywant.demo.Entity.Subadmin;
 import com.jaywant.demo.Repo.EmployeeRepo;
 import com.jaywant.demo.Repo.SubAdminRepo;
@@ -244,7 +245,20 @@ public class SubAdminService {
     Employee savedEmployee = employeeRepo.save(e);
 
     // Handle automatic device mapping for new employee
-    deviceMappingService.handleNewEmployeeDeviceMapping(savedEmployee);
+    // This will only create mapping for the new employee, not affect existing ones
+    try {
+      System.out.println("Creating device mapping for new employee: " + savedEmployee.getEmpId());
+      EmployeeDeviceMapping mapping = deviceMappingService.handleNewEmployeeDeviceMapping(savedEmployee);
+      if (mapping != null) {
+        System.out.println("Successfully created device mapping for employee: " + savedEmployee.getEmpId());
+      } else {
+        System.out.println("No device mapping created (subadmin may not have device serial number)");
+      }
+    } catch (Exception ex) {
+      System.err
+          .println("Error creating device mapping for employee " + savedEmployee.getEmpId() + ": " + ex.getMessage());
+      // Don't fail the employee creation if device mapping fails
+    }
 
     return savedEmployee;
   }

@@ -187,15 +187,36 @@ public class SalaryService {
 
         List<Attendance> attendances = attendanceRepo.findByEmployee(employee);
 
-        // Get salary configuration for the subadmin
-        SalaryConfiguration config = salaryConfigRepository.findBySubadminId(employee.getSubadmin().getId())
+        // Get salary configuration for the subadmin (use the most recent one if
+        // multiple exist)
+        SalaryConfiguration config = salaryConfigRepository
+                .findFirstBySubadminIdOrderByIdDesc(employee.getSubadmin().getId())
                 .orElse(new SalaryConfiguration()); // Use default if not found
 
+        // Monthly calculation as requested:
+        // 1. Monthly CTC = Annual CTC ÷ 12
         double monthlyCtc = annualCtc / 12.0;
-        double basic = monthlyCtc * (config.getBasicPercentage() / 100.0);
-        double hra = basic * (config.getHraPercentage() / 100.0);
-        double da = basic * (config.getDaPercentage() / 100.0);
-        double special = basic * (config.getSpecialAllowancePercentage() / 100.0);
+
+        // 2. Monthly Basic = Monthly CTC × Basic%
+        double monthlyBasic = monthlyCtc * (config.getBasicPercentage() / 100.0);
+
+        // 3. Allowances based on Monthly Basic (not Monthly CTC)
+        double hra = monthlyBasic * (config.getHraPercentage() / 100.0);
+        double da = monthlyBasic * (config.getDaPercentage() / 100.0);
+        double special = monthlyBasic * (config.getSpecialAllowancePercentage() / 100.0);
+
+        // Use monthlyBasic instead of basic for consistency
+        double basic = monthlyBasic;
+
+        // Debug logging for salary calculations
+        System.out.println("💰 SALARY CALCULATION DEBUG:");
+        System.out.println("   Annual CTC: ₹" + annualCtc);
+        System.out.println("   Monthly CTC: ₹" + monthlyCtc);
+        System.out.println("   Basic %: " + config.getBasicPercentage() + "%");
+        System.out.println("   Monthly Basic: ₹" + basic);
+        System.out.println("   HRA (" + config.getHraPercentage() + "%): ₹" + hra);
+        System.out.println("   DA (" + config.getDaPercentage() + "%): ₹" + da);
+        System.out.println("   Special (" + config.getSpecialAllowancePercentage() + "%): ₹" + special);
 
         // Additional allowances (fixed amounts)
         double transportAllowance = config.getTransportAllowance();

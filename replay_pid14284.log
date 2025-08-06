@@ -1472,7 +1472,7 @@ instanceKlass org/apache/maven/model/plugin/DefaultReportingConverter$$FastClass
 instanceKlass org/apache/maven/model/plugin/DefaultReportConfigurationExpander$$FastClassByGuice$$58727656
 instanceKlass org/apache/maven/model/plugin/DefaultPluginConfigurationExpander$$FastClassByGuice$$58107617
 instanceKlass org/apache/maven/model/path/ProfileActivationFilePathInterpolator$$FastClassByGuice$$56931778
-instanceKlass org/apache/maven/model/path/DefaultUrlNormalizer$$FastClassByGuice$$55808108
+instanceKlass org/apache/maven/model/path/DefaultUrlNormalizer$$FastClassByGuice$$55828208
 instanceKlass org/apache/maven/model/path/DefaultPathTranslator$$FastClassByGuice$$55014682
 instanceKlass org/apache/maven/model/path/DefaultModelUrlNormalizer$$FastClassByGuice$$53914813
 instanceKlass org/apache/maven/model/path/DefaultModelPathTranslator$$FastClassByGuice$$52785823
@@ -1695,7 +1695,7 @@ instanceKlass com/google/inject/internal/aop/ImmutableStringTrie
 instanceKlass org/apache/maven/plugin/internal/DefaultPluginDependenciesResolver$$FastClassByGuice$$818480
 instanceKlass com/google/inject/internal/aop/GeneratedClassDefiner
 # instanceKlass java/lang/ClassLoader$$DefineAccessByGuice$$+0x000002ad16584000
-instanceKlass  @bci com/google/inject/internal/aop/UnsafeClassDefiner$ClassLoaderDefineClassHolder <clinit> ()V 0 <appendix> argL0 ; # com/google/inject/internal/aop/UnsafeClassDefiner$ClassLoaderDefineClassHolder$$Lambda+0x000002ad16580818
+instanceKlass  @bci com/google/inject/internal/aop/UnsafeClassDefiner$ClassLoaderDefineClassHolder <clinit> ()V 0 <appendix> argL0 ; # com/google/inject/internal/aop/UnsafeClassDefiner$ClassLoaderDefineClassHolder$$Lambda+0x000002ad16582828
 instanceKlass com/google/inject/internal/aop/UnsafeClassDefiner$ClassLoaderDefineClassHolder
 instanceKlass com/google/inject/internal/asm/$Handler
 instanceKlass java/nio/file/Files$3

@@ -151,4 +151,13 @@ public class AttendanceService {
         .orElseThrow(() -> new RuntimeException("Employee not found with id: " + empId));
     return this.attendanceRepo.findByEmployeeAndDateContaining(employee, date);
   }
+
+  public List<Attendance> getAttendanceForSubAdminByMonth(int subAdminId, String month) {
+    List<Employee> employees = employeeRepo.findBySubadminId(subAdminId);
+    List<Attendance> monthlyAttendance = new ArrayList<>();
+    for (Employee employee : employees) {
+        monthlyAttendance.addAll(attendanceRepo.findByEmployeeAndDateStartingWith(employee, month));
+    }
+    return monthlyAttendance;
+}
 }

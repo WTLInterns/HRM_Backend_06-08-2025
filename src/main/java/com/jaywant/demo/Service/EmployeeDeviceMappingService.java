@@ -63,8 +63,12 @@ public class EmployeeDeviceMappingService {
                 .findByHrmEmployeeIdAndTerminalSerial(employee.getEmpId(), deviceSerialNumber);
 
         if (existingMapping.isPresent()) {
-            System.out.println("Mapping already exists for Employee ID: " + employee.getEmpId());
-            return existingMapping.get(); // Return existing mapping
+            System.out.println("Mapping already exists for Employee ID: " + employee.getEmpId() +
+                    " with device: " + deviceSerialNumber);
+            // Update the existing mapping to ensure it's current
+            EmployeeDeviceMapping existing = existingMapping.get();
+            existing.setUpdatedAt(java.time.LocalDateTime.now());
+            return mappingRepo.save(existing);
         }
 
         // Use HRM Employee ID as EasyTime Employee ID for direct mapping
@@ -127,6 +131,17 @@ public class EmployeeDeviceMappingService {
         for (Employee employee : employees) {
             System.out.println("Processing employee: " + employee.getFirstName() + " " + employee.getLastName() +
                     " (ID: " + employee.getEmpId() + ")");
+
+            // Update employee's device serial number if not already set
+            if (employee.getDeviceSerialNumber() == null ||
+                    !employee.getDeviceSerialNumber().equals(deviceSerialNumber)) {
+                employee.setDeviceSerialNumber(deviceSerialNumber);
+                employeeRepo.save(employee);
+                System.out.println("Updated device serial for employee: " + employee.getEmpId());
+            }
+
+            // Create or update device mapping (this method handles existing mappings
+            // safely)
             createEmployeeDeviceMapping(employee, deviceSerialNumber);
         }
 

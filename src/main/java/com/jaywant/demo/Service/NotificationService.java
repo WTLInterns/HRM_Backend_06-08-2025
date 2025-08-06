@@ -363,4 +363,70 @@ public class NotificationService {
             System.err.println("❌ Failed to send resume submission notification: " + e.getMessage());
         }
     }
+
+    /**
+     * Check if a notification exists by ID
+     */
+    public boolean notificationExists(Long notificationId) {
+        return notificationLogRepository.existsById(notificationId);
+    }
+
+    /**
+     * Delete a single notification by ID
+     */
+    public boolean deleteNotification(Long notificationId) {
+        try {
+            if (notificationLogRepository.existsById(notificationId)) {
+                notificationLogRepository.deleteById(notificationId);
+                System.out.println("✅ Notification deleted successfully with ID: " + notificationId);
+                return true;
+            } else {
+                System.err.println("❌ Notification not found with ID: " + notificationId);
+                return false;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting notification with ID " + notificationId + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete multiple notifications by IDs
+     */
+    public int deleteNotifications(List<Long> notificationIds) {
+        int deletedCount = 0;
+        for (Long notificationId : notificationIds) {
+            try {
+                if (notificationLogRepository.existsById(notificationId)) {
+                    notificationLogRepository.deleteById(notificationId);
+                    deletedCount++;
+                    System.out.println("✅ Notification deleted successfully with ID: " + notificationId);
+                } else {
+                    System.err.println("❌ Notification not found with ID: " + notificationId);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error deleting notification with ID " + notificationId + ": " + e.getMessage());
+            }
+        }
+        System.out.println("📊 Deleted " + deletedCount + " out of " + notificationIds.size() + " notifications");
+        return deletedCount;
+    }
+
+    /**
+     * Delete all notifications for a specific user
+     */
+    public int deleteAllNotificationsForUser(String userType, Integer userId) {
+        try {
+            List<NotificationLog> notifications = notificationLogRepository
+                    .findByRecipientTypeAndRecipientIdOrderBySentAtDesc(userType, userId);
+            int count = notifications.size();
+            notificationLogRepository.deleteAll(notifications);
+            System.out.println("✅ Deleted all " + count + " notifications for " + userType + " with ID: " + userId);
+            return count;
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting all notifications for " + userType + " with ID " + userId + ": "
+                    + e.getMessage());
+            return 0;
+        }
+    }
 }

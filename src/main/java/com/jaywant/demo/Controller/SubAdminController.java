@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,10 +33,11 @@ import com.jaywant.demo.Repo.SubAdminRepo;
 import com.jaywant.demo.Service.EmailService;
 import com.jaywant.demo.Service.SubAdminPasswordResetService;
 import com.jaywant.demo.Service.SubAdminService;
+import com.jaywant.demo.Service.AttendanceService;
+import com.jaywant.demo.Service.ExcelService;
 
 @RestController
 @RequestMapping("/api/subadmin")
-// @CrossOrigin(origins = "*")
 public class SubAdminController {
 
   @Autowired
@@ -55,9 +55,15 @@ public class SubAdminController {
   @Autowired
   private SubAdminService subAdminService;
 
+  @Autowired
+  private AttendanceService attendanceService;
+
+  @Autowired
+  private ExcelService excelService;
+
   // Endpoint for SubAdmin login
   @PostMapping("/login")
-  @CrossOrigin("*")
+
   public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
     try {
       List<Subadmin> subAdmins = subAdminRepo.findByEmail(email);
@@ -110,6 +116,7 @@ public class SubAdminController {
       }
       return ResponseEntity.ok(response);
     } catch (Exception ex) {
+      ex.printStackTrace();
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body("An error occurred during login.");
     }
@@ -571,5 +578,23 @@ public class SubAdminController {
     Map<String, String> response = new HashMap<>();
     response.put("status", subadmin.getStatus());
     return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/{subadminId}/attendance/download")
+  public ResponseEntity<byte[]> downloadAttendanceReport(
+      @PathVariable int subadminId,
+      @RequestParam String month) {
+    try {
+      List<com.jaywant.demo.Entity.Attendance> attendanceList = attendanceService.getAttendanceForSubAdminByMonth(subadminId, month);
+      byte[] excelFile = excelService.generateAttendanceExcel(attendanceList);
+
+      org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+      headers.setContentDispositionFormData("attachment", "attendance_" + month + ".xlsx");
+
+      return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
+    } catch (IOException e) {
+      return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

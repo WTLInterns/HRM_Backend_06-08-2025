@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Employee {
 
   @Id
@@ -365,7 +366,7 @@ public class Employee {
     this.subadmin = subadmin;
   }
 
-  public List<Attendance> getAttendance() {
+  public List<Attendance> getAttendances() {
     return attendance;
   }
 

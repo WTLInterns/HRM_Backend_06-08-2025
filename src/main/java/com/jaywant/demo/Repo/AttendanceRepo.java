@@ -56,4 +56,6 @@ public interface AttendanceRepo extends JpaRepository<Attendance, Long> {
     @Query("SELECT a FROM Attendance a WHERE a.date = :date AND a.punchInTime IS NOT NULL AND a.punchOutTime IS NULL")
     List<Attendance> findIncompleteAttendanceByDate(@Param("date") String date);
 
+    List<Attendance> findByEmployeeAndDateStartingWith(Employee employee, String month);
+
 }

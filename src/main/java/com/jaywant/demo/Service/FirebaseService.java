@@ -1,14 +1,18 @@
 package com.jaywant.demo.Service;
 
-import com.google.firebase.messaging.AndroidConfig;
-import com.google.firebase.messaging.AndroidNotification;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
+import com.google.firebase.messaging.ApsAlert;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
 
 @Service
 public class FirebaseService {
@@ -53,10 +57,25 @@ public class FirebaseService {
                             .build())
                     .build();
 
+            // Create iOS-specific configuration
+            ApnsConfig apnsConfig = ApnsConfig.builder()
+                    .setAps(Aps.builder()
+                            .setAlert(ApsAlert.builder()
+                                    .setTitle(title)
+                                    .setBody(body)
+                                    .build())
+                            .setBadge(1)
+                            .setSound("default")
+                            .setContentAvailable(true)
+                            .setMutableContent(true)
+                            .build())
+                    .build();
+
             Message.Builder messageBuilder = Message.builder()
                     .setToken(token)
                     .setNotification(notification)
-                    .setAndroidConfig(androidConfig);
+                    .setAndroidConfig(androidConfig)
+                    .setApnsConfig(apnsConfig); // Add iOS configuration
 
             if (data != null && !data.isEmpty()) {
                 messageBuilder.putAllData(data);
@@ -64,10 +83,18 @@ public class FirebaseService {
 
             Message message = messageBuilder.build();
             String response = firebaseMessaging.send(message);
-            System.out.println("? Notification sent successfully: " + response);
+            System.out.println("✅ Notification sent successfully: " + response);
+            System.out.println("📱 Token type detected: " + (isIOSToken(token) ? "iOS" : "Android"));
             return response;
         } catch (Exception e) {
-            System.err.println("? Failed to send notification: " + e.getMessage());
+            System.err.println("❌ Failed to send notification: " + e.getMessage());
+            System.err.println("🔍 Token: " + token);
+            System.err.println("📱 Token type: " + (isIOSToken(token) ? "iOS" : "Android"));
+            if (isIOSToken(token)) {
+                System.err.println("🍎 iOS notification failed - check Apple Push Notification service configuration");
+                System.err.println("💡 Ensure your Firebase project has valid APNs certificates");
+            }
+            e.printStackTrace();
             return null;
         }
     }
@@ -78,5 +105,37 @@ public class FirebaseService {
 
     public boolean isFirebaseAvailable() {
         return isFirebaseEnabled && firebaseMessaging != null;
+    }
+
+    /**
+     * Detect if the FCM token is from an iOS device
+     * iOS tokens are typically longer and have different patterns than Android
+     * tokens
+     */
+    private boolean isIOSToken(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
+        }
+
+        // iOS tokens are typically 64 characters long and contain only hexadecimal
+        // characters
+        // Android tokens are longer and contain various characters including
+        // underscores, hyphens
+
+        // Check for typical iOS token characteristics:
+        // 1. Length around 64 characters
+        // 2. Only contains hexadecimal characters (0-9, a-f, A-F)
+        if (token.length() == 64 && token.matches("^[0-9a-fA-F]+$")) {
+            return true;
+        }
+
+        // Additional check: Android tokens typically contain colons, underscores, or
+        // hyphens
+        // iOS tokens typically don't
+        if (!token.contains(":") && !token.contains("_") && !token.contains("-") && token.length() >= 60) {
+            return true;
+        }
+
+        return false;
     }
 }

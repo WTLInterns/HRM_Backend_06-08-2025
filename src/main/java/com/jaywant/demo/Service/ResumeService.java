@@ -16,18 +16,18 @@ import java.util.List;
 
 @Service
 public class ResumeService {
-    
+
     @Autowired
     private ResumeRepo resumeRepo;
-    
+
     @Autowired
     private EmployeeRepo employeeRepo;
 
-    private final String UPLOAD_DIR = "src/main/resources/static/uploads/resumes/";
+    private final String UPLOAD_DIR = "uploads/resumes/";
 
     public Resume uploadResume(MultipartFile file, int empId, String jobRole) throws IOException {
         Employee employee = employeeRepo.findById(empId)
-            .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         // Create upload directory if it doesn't exist
         Path uploadPath = Paths.get(UPLOAD_DIR);
@@ -45,8 +45,14 @@ public class ResumeService {
         resume.setEmployee(employee);
         resume.setJobRole(jobRole);
         resume.setResumeFileName(fileName);
-        resume.setResumeFilePath(filePath.toString());
+        // Store the full absolute path for proper file access
+        resume.setResumeFilePath(filePath.toAbsolutePath().toString());
         resume.setUploadDateTime(LocalDateTime.now());
+
+        System.out.println("✅ Resume saved successfully:");
+        System.out.println("📁 File name: " + fileName);
+        System.out.println("📂 Full path: " + filePath.toAbsolutePath().toString());
+        System.out.println("🌐 Access URL: https://api.managifyhr.com/uploads/resumes/" + fileName);
 
         return resumeRepo.save(resume);
     }
@@ -57,21 +63,25 @@ public class ResumeService {
 
     public Resume getResumeById(int resumeId) {
         return resumeRepo.findById(resumeId)
-            .orElseThrow(() -> new RuntimeException("Resume not found"));
-    }  
+                .orElseThrow(() -> new RuntimeException("Resume not found"));
+    }
 
     public void deleteResume(int resumeId) throws IOException {
         Resume resume = resumeRepo.findById(resumeId)
-            .orElseThrow(() -> new RuntimeException("Resume not found"));
+                .orElseThrow(() -> new RuntimeException("Resume not found"));
 
         // Delete the physical file
         Path filePath = Paths.get(resume.getResumeFilePath());
         if (Files.exists(filePath)) {
             Files.delete(filePath);
+            System.out.println("🗑️ Resume file deleted: " + filePath.toAbsolutePath().toString());
+        } else {
+            System.out.println("⚠️ Resume file not found at: " + filePath.toAbsolutePath().toString());
         }
 
         // Delete the database entry
         resumeRepo.deleteById(resumeId);
+        System.out.println("✅ Resume database entry deleted for ID: " + resumeId);
     }
 
-} 
+}
